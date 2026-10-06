@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>breakpoem</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <main class="main">
+        <div class="poem" id="poem"></div>
+    </main>
+
+    <!-- <canvas id="wires" aria-hidden="true"></canvas> -->
+
+    <section class="code-area">
+        <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+        <button id="play-btn">play</button>
+        <button id="stop-btn">stop</button>
+        <div class="foot">
+            <p id="status" role="status">loading strudel...</p>
+            </p>
+        </div>
+    </section>
+
+    <script src="https://unpkg.com/@strudel/web@1.3.0"></script>
+    <script src="poem.js"></script>
+</body>
+
+</html>
