@@ -1,0 +1,220 @@
+:root {
+    --deep: #1428c4;        /* blue screen, up top */
+    --fog: #aab3df;         /* where the path starts */
+    --light: #fff;
+    --pencil: rgba(255, 255, 255, 0.82);
+    --faint: rgba(255, 255, 255, 0.6);
+    --lit: #f4ff5e;
+    --glass: rgba(255, 255, 255, 0.14);
+    --glass-edge: rgba(255, 255, 255, 0.45);
+    color-scheme: dark;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    display: grid;
+    grid-template-columns: minmax(17rem, 23rem) 1fr;
+    grid-template-areas: "code stage";
+    background: linear-gradient(180deg, var(--deep) 0%, #4a5cd4 40%, #8a95dc 72%, var(--fog) 100%) fixed;
+    color: var(--pencil);
+    font: 13px/1.5 Verdana, Tahoma, "DejaVu Sans", sans-serif;
+    overflow: hidden;
+}
+
+::selection {
+    background: var(--lit);
+    color: var(--deep);
+}
+
+/* clouds: soft white blots drifting under everything, thicker toward the fog */
+
+.sky {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.sky i {
+    position: absolute;
+    display: block;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.18) 55%, rgba(255, 255, 255, 0));
+    will-change: transform;
+    animation: drift 90s ease-in-out infinite alternate;
+}
+
+.sky i:nth-child(1) { width: 60vw; height: 28vh; left: -10vw; top: 68vh; animation-duration: 110s; }
+.sky i:nth-child(2) { width: 55vw; height: 30vh; left: 50vw; top: 76vh; animation-duration: 80s; animation-delay: -30s; }
+.sky i:nth-child(3) { width: 45vw; height: 22vh; left: 20vw; top: 52vh; opacity: 0.7; animation-duration: 130s; animation-delay: -60s; }
+.sky i:nth-child(4) { width: 38vw; height: 18vh; left: 62vw; top: 38vh; opacity: 0.5; animation-duration: 100s; animation-delay: -15s; }
+.sky i:nth-child(5) { width: 30vw; height: 14vh; left: 5vw; top: 30vh; opacity: 0.4; animation-duration: 140s; animation-delay: -70s; }
+.sky i:nth-child(6) { width: 26vw; height: 12vh; left: 40vw; top: 12vh; opacity: 0.25; animation-duration: 120s; animation-delay: -40s; }
+.sky i:nth-child(7) { width: 70vw; height: 24vh; left: 15vw; top: 88vh; animation-duration: 95s; animation-delay: -20s; }
+
+@keyframes drift {
+    from { transform: translate3d(-6vw, 0, 0) scale(1); }
+    to { transform: translate3d(6vw, -2vh, 0) scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sky i {
+        animation: none;
+    }
+}
+
+/* stage */
+
+.stage {
+    grid-area: stage;
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+}
+
+.stage canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#scene {
+    filter: blur(0.6px);
+}
+
+/* small blurred copies of the scene, laid over it: a tight glow and a wide halo */
+#bloom,
+#halo {
+    mix-blend-mode: screen;
+    pointer-events: none;
+}
+
+#bloom {
+    filter: blur(18px) brightness(2.6);
+}
+
+#halo {
+    filter: blur(48px) brightness(3.5);
+}
+
+/* the poem as written, on a pane of glass */
+
+.code-area {
+    grid-area: code;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-height: 0;
+    margin: 1rem 0 1rem 1rem;
+    padding: 1.5rem 1.25rem 1.25rem 1.5rem;
+    border: 1px solid var(--glass-edge);
+    border-radius: 14px;
+    background: var(--glass);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 12px 40px rgba(10, 20, 120, 0.25);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+#code {
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    resize: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    line-height: 1.8;
+    white-space: pre;
+    overflow: auto;
+    caret-color: var(--lit);
+}
+
+#code:focus {
+    color: var(--light);
+}
+
+.foot {
+    display: flex;
+    align-items: baseline;
+    gap: 1.25rem;
+}
+
+.foot p {
+    margin: 0;
+    color: var(--faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+button {
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    background: none;
+    color: var(--light);
+    font: inherit;
+    cursor: pointer;
+}
+
+button:hover,
+button:focus-visible {
+    outline: none;
+    border-bottom-color: var(--lit);
+    color: var(--lit);
+}
+
+.key {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.2rem 1rem;
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--faint);
+}
+
+.key dd {
+    margin: 0;
+}
+
+/* esc: just the stage */
+
+body.bare {
+    grid-template-columns: 1fr;
+    grid-template-areas: "stage";
+}
+
+body.bare .code-area {
+    display: none;
+}
+
+@media (max-width: 720px) {
+    body {
+        grid-template-columns: 1fr;
+        grid-template-rows: 58vh 1fr;
+        grid-template-areas: "stage" "code";
+    }
+
+    .code-area {
+        margin: 0 0.75rem 0.75rem;
+        padding: 1rem;
+    }
+
+    .key {
+        display: none;
+    }
+}

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>breakpoem / wires</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="sky" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+    <main class="stage">
+        <canvas id="scene"></canvas>
+        <canvas id="bloom" aria-hidden="true"></canvas>
+        <canvas id="halo" aria-hidden="true"></canvas>
+    </main>
+
+    <section class="code-area">
+        <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="poem"></textarea>
+        <div class="foot">
+            <button id="play-btn">play</button>
+            <button id="stop-btn">stop</button>
+            <p id="status" role="status">loading strudel...</p>
+        </div>
+        <!-- <dl class="key">
+            <dt>shivering</dt>
+            <dd>a word plays once per syllable. write po-em to split it yourself</dd>
+            <dt>word*4</dt>
+            <dd>hit it four times</dd>
+            <dt>&lt;a b c&gt;</dt>
+            <dd>one place, the next word each time the line comes round</dd>
+            <dt>&lt;a b c&gt;*4</dt>
+            <dd>change the word four times within the line</dd>
+            <dt>[a b]</dt>
+            <dd>two words in one beat</dd>
+            <dt>~</dt>
+            <dd>a silent beat</dd>
+            <dt>⌘ ↵</dt>
+            <dd>play. ⌘ . stops, esc hides this column</dd>
+        </dl> -->
+    </section>
+
+    <script src="https://unpkg.com/@strudel/web@1.3.0"></script>
+    <script src="score.js"></script>
+    <script src="stage.js"></script>
+    <script src="poem.js"></script>
+</body>
+
+</html>
