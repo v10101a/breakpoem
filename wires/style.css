@@ -93,6 +93,13 @@ body {
     filter: blur(0.6px);
 }
 
+/* what the syllables let off, under the text: half size and blurred, so it reads as cloud */
+#vapor {
+    filter: blur(4px);
+    mix-blend-mode: screen;
+    pointer-events: none;
+}
+
 /* small blurred copies of the scene, laid over it: a tight glow and a wide halo */
 #bloom,
 #halo {
@@ -202,16 +209,27 @@ body.bare .code-area {
     display: none;
 }
 
-@media (max-width: 720px) {
+/* upright, as on a phone or in a 9:16 window for a post: the code at the bottom, always the whole poem,
+   exactly as tall as it is (poem.js sets the height), and the stage gets everything above it.
+   the code face grows with the frame, so it reads the same on a phone and in a 1080 by 1920 post */
+
+@media (max-width: 720px), (max-aspect-ratio: 4/5) {
     body {
         grid-template-columns: 1fr;
-        grid-template-rows: 58vh 1fr;
+        grid-template-rows: minmax(0, 1fr) auto;
         grid-template-areas: "stage" "code";
     }
 
     .code-area {
         margin: 0 0.75rem 0.75rem;
-        padding: 1rem;
+        padding: 1rem 1.1rem;
+        gap: 0.9rem;
+        font-size: clamp(12px, 2.8vw, 22px);
+    }
+
+    #code {
+        flex: none;
+        line-height: 1.65;
     }
 
     .key {

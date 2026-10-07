@@ -4,20 +4,51 @@ const sceneEl = document.querySelector('#scene');
 const bloomEl = document.querySelector('#bloom');
 const haloEl = document.querySelector('#halo');
 const lightEl = document.createElement('canvas');   // the scene on black, small: what glows
+const vaporEl = document.querySelector('#vapor');   // under the words, half size and blurred: what dissolves
 const ctx = sceneEl.getContext('2d');
 const bloomCtx = bloomEl.getContext('2d');
 const haloCtx = haloEl.getContext('2d');
 const lightCtx = lightEl.getContext('2d');
+const vaporCtx = vaporEl.getContext('2d');
 
 const FACE = '"Times New Roman", Times, serif';
 const LEADING = 1.2;    // line height, in ems
 const SPACE = 0.26;     // gap between words, in ems
 const PATH = 7;         // seconds the thread takes to fade. long: it is a trail, not a flash
+const VAPOR = 3.4;      // seconds a syllable takes to dissolve into the sky
+const COPIES = 5;       // a dissolving syllable is this many faint copies, scattering as it ages
 const INK = [255, 255, 255];
 const LIT = [244, 255, 94];     // the syllable sounding
 const TRAIL = [255, 92, 196];   // the thread
 const FRAME = [120, 246, 255];  // the box
+const FOG = [198, 206, 238];    // what vapor fades toward: the sky where the path starts
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// a tile of soft blots. the vapor is seen through it, so it is mottled like cloud, not flat
+const grain = document.createElement('canvas');
+grain.width = grain.height = 256;
+{
+    const g = grain.getContext('2d');
+    g.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    g.fillRect(0, 0, 256, 256);
+    for (let k = 0; k < 80; k++) {
+        const r = 12 + Math.random() * 36;
+        const x = Math.random() * 256;
+        const y = Math.random() * 256;
+        const blot = g.createRadialGradient(x, y, 0, x, y, r);
+        blot.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+        blot.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        g.fillStyle = blot;
+        // painted nine times, shifted a tile each way, so the tile repeats without a seam
+        for (const ox of [-256, 0, 256]) {
+            for (const oy of [-256, 0, 256]) {
+                g.setTransform(1, 0, 0, 1, ox, oy);
+                g.fillRect(0, 0, 256, 256);
+            }
+        }
+    }
+}
+const weave = vaporCtx.createPattern(grain, 'repeat');
 
 let rows = [];          // from readPoem
 let hits = [];          // recent hits, oldest first. the thread runs through them
@@ -105,7 +136,10 @@ function fitStage() {
     lightEl.height = bloomEl.height = Math.ceil(stageH / 4);
     haloEl.width = Math.ceil(stageW / 8);
     haloEl.height = Math.ceil(stageH / 8);
+    vaporEl.width = Math.ceil(stageW / 2);
+    vaporEl.height = Math.ceil(stageH / 2);
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    vaporCtx.setTransform(0.5, 0, 0, 0.5, 0, 0);    // drawn in stage coordinates, like the scene
     hits = [];
     fitPoem();
 }
@@ -172,7 +206,20 @@ function strike(word, i, seconds) {
         lean: Array.from({ length: 8 }, () => shake(0.05)),     // each box sits a little off
     });
     if (hits.length > 96) hits.shift();
-    if (!still) puffs.push({ word, i, at: clock, drift: shake(0.3) + 0.1 });
+    if (!still) {
+        puffs.push({
+            word,
+            i,
+            at: clock,
+            drift: shake(0.3) + 0.1,
+            copies: Array.from({ length: COPIES }, () => ({
+                dx: shake(1),
+                dy: shake(1),
+                size: 0.85 + Math.random() * 0.3,
+                phase: Math.random() * Math.PI * 2,
+            })),
+        });
+    }
 }
 
 // where the thread passes a syllable: just above it or just below it, following the word if it moved
@@ -212,18 +259,30 @@ function drawWord(word, row, dt) {
     }
 }
 
-// skywriting: a struck syllable lets off a copy of itself that drifts up and thins out
+// skywriting: a struck syllable lets off a copy of itself that rises, swells and thins into the sky.
+// it goes on the vapor canvas as a few faint copies that wander apart as it ages, so it diffuses
 function drawPuffs() {
-    puffs = puffs.filter((puff) => clock - puff.at < 1.8);
-    if (puffs.length > 60) puffs.splice(0, puffs.length - 60);
+    puffs = puffs.filter((puff) => clock - puff.at < VAPOR);
+    if (puffs.length > 40) puffs.splice(0, puffs.length - 40);
     for (const puff of puffs) {
-        const age = clock - puff.at;
+        const t = (clock - puff.at) / VAPOR;
         const part = puff.word.parts[puff.i];
-        setType(fontSize * (1 + age * 0.22));
-        ctx.fillStyle = paint(INK, 0.4 * fade(age, 1.8));
-        ctx.fillText(part.text, puff.word.x + part.dx + age * puff.drift * fontSize, puff.word.y - age * fontSize * 0.45);
+        const rise = 1 - (1 - t) ** 2;              // quick to leave the line, then hanging
+        const spread = fontSize * 0.55 * t;         // how far the copies have wandered
+        const x0 = puff.word.x + part.dx + rise * puff.drift * fontSize * 1.4;
+        const y0 = puff.word.y - rise * fontSize * 1.5;
+        vaporCtx.fillStyle = paint(mix(INK, FOG, t), 0.16 * (1 - t) ** 1.5);
+        for (const copy of puff.copies) {
+            const grow = copy.size * (1 + t * 0.9);
+            const sway = Math.sin(clock * 0.8 + copy.phase) * spread * 0.4;
+            vaporCtx.font = `${fontSize * grow}px ${FACE}`;
+            vaporCtx.fillText(
+                part.text,
+                x0 + copy.dx * spread + sway - (grow - 1) * part.w / 2,
+                y0 + copy.dy * spread * 0.6,
+            );
+        }
     }
-    setType(fontSize);
 }
 
 function drawBoxes() {
@@ -267,22 +326,15 @@ function drawThread() {
         const y2 = y3 - (yb - y0) / 9;
         const reach = k === points.length - 1 ? Math.min(1, age / 0.09) : 1;
         ctx.lineWidth = 1 + 1.8 * life;
-        ctx.strokeStyle = paint(TRAIL, 0.25 + 0.7 * life ** 1.3);
-        ctx.beginPath();
-        ctx.moveTo(x0, y0);
-        if (reach === 1) {
-            ctx.bezierCurveTo(x1, y1, x2, y2, x3, y3);
-        } else {
-            for (let s = 1; s <= 12; s++) {
-                const t = (s / 12) * reach;
-                const u = 1 - t;
-                ctx.lineTo(
-                    u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3,
-                    u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3,
-                );
-            }
+        ctx.strokeStyle = paint(TRAIL, 0.12 + 0.8 * life ** 1.3);
+        stroke(ctx, [x0, y0, x1, y1, x2, y2, x3, y3], reach);
+        // as it ages the same stretch widens and softens on the vapor canvas: the thread turns to haze
+        if (reach === 1 && life < 0.85) {
+            vaporCtx.lineCap = 'round';
+            vaporCtx.lineWidth = 3 + 10 * (1 - life);
+            vaporCtx.strokeStyle = paint(TRAIL, 0.35 * (1 - life) * Math.min(1, life * 4));
+            stroke(vaporCtx, [x0, y0, x1, y1, x2, y2, x3, y3], 1);
         }
-        ctx.stroke();
     }
     // a small block at the head of the thread
     const head = hits[hits.length - 1];
@@ -290,6 +342,25 @@ function drawThread() {
     const s = fontSize * 0.2;
     ctx.fillStyle = paint(FRAME, 0.6 * fade(clock - head.at, 0.7));
     ctx.fillRect(hx - s / 2, hy - s / 2, s, s);
+}
+
+// one stretch of the thread (not named curve: strudel owns that global): a cubic, or only the first part of one while it is still being drawn out
+function stroke(c, [x0, y0, x1, y1, x2, y2, x3, y3], reach) {
+    c.beginPath();
+    c.moveTo(x0, y0);
+    if (reach === 1) {
+        c.bezierCurveTo(x1, y1, x2, y2, x3, y3);
+    } else {
+        for (let s = 1; s <= 12; s++) {
+            const t = (s / 12) * reach;
+            const u = 1 - t;
+            c.lineTo(
+                u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3,
+                u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3,
+            );
+        }
+    }
+    c.stroke();
 }
 
 function drawStage() {
@@ -301,6 +372,8 @@ function drawStage() {
     layOut(dt);
 
     ctx.clearRect(0, 0, stageW, stageH);
+    vaporCtx.globalCompositeOperation = 'source-over';
+    vaporCtx.clearRect(0, 0, stageW, stageH);
     setType(fontSize);
     for (const row of rows) {
         for (const word of shown(row.place)) drawWord(word, row, dt);
@@ -309,11 +382,18 @@ function drawStage() {
     drawBoxes();
     drawThread();
 
+    // the vapor is seen through the grain, which drifts, so it is mottled and moving like cloud
+    weave.setTransform(new DOMMatrix().translate(still ? 0 : clock * 4, still ? 0 : -clock * 7).scale(1.6));
+    vaporCtx.globalCompositeOperation = 'destination-in';
+    vaporCtx.fillStyle = weave;
+    vaporCtx.fillRect(0, 0, stageW, stageH);
+
     // the glow: the scene flattened onto black, cubed so only what's really lit blooms, blurred by css
     lightCtx.globalCompositeOperation = 'source-over';
     lightCtx.fillStyle = '#000';
     lightCtx.fillRect(0, 0, lightEl.width, lightEl.height);
     lightCtx.drawImage(sceneEl, 0, 0, lightEl.width, lightEl.height);
+    lightCtx.drawImage(vaporEl, 0, 0, lightEl.width, lightEl.height);
     bloomCtx.globalCompositeOperation = 'copy';
     bloomCtx.drawImage(lightEl, 0, 0);
     bloomCtx.globalCompositeOperation = 'multiply';

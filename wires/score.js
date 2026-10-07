@@ -4,6 +4,14 @@
 
 const LETTER = /[\p{L}0-9]/u;
 
+// how a line is divided in time. two to try:
+//   syllables  evenly among its syllables: a word is worth as many steps as it has syllables, so I'm trembling
+//              counts 1 2 3, and word*2 says the word twice and takes twice the room. a rest keeps about
+//              a word's share of the line
+//   words      evenly among its words, the way mini-notation reads it, and then each word's step among its
+//              syllables: I'm trembling is 1, then 2 3 in the same room the 1 had
+const STEPS = 'syllables';
+
 // mini-notation can't read everything a poem has in it. swap those characters one for one,
 // so an offset into the code still points at the same character of the line
 function toMini(text) {
@@ -150,14 +158,17 @@ function readLine(text) {
     const row = { place: placeOf(ast, line, []), heat: 0 };
     for (const word of line.words.values()) word.row = row;
     // each hap remembers where in the code it came from. that's how a sound finds its word.
-    // then the word's step is divided among its syllables, the way [a b c] divides a step
-    row.pattern = patternifyAST(ast, line.code)
+    // then each word becomes its syllables in a row, and the line is divided up as STEPS says
+    const marks = patternifyAST(ast, line.code)
         .withHap((hap) => hap.withValue((value) => ({
             word: hap.context.locations.map((loc) => line.words.get(loc.start)).find(Boolean),
             n: Array.isArray(value) ? value[1] : undefined,
         })))
-        .filterValues((mark) => mark.word?.voiced)
-        .squeezeBind((mark) => fastcat(...mark.word.parts.map((part, i) => ({ ...mark, part: i }))));
+        .filterValues((mark) => mark.word?.voiced);
+    const parts = (mark) => fastcat(...mark.word.parts.map((part, i) => ({ ...mark, part: i })));
+    row.pattern = STEPS === 'words'
+        ? marks.squeezeBind(parts)
+        : marks.stepBind((mark) => parts(mark).setSteps(mark.word.parts.length));
     return row;
 }
 
